@@ -440,7 +440,7 @@ with st.sidebar:
         st.markdown("<div style='font-size:0.75rem; color:#34d399;'>● Online Session</div>", unsafe_allow_html=True)
 
     with st.expander("⚙️ System Architecture", expanded=False):
-        st.markdown("**LLM Provider:** Groq (OpenAI GPT-OSS 20B)")
+        st.markdown("**LLM Provider:** Groq (Compound-Mini)")
         st.markdown("**Checkpoint Engine:** SqliteSaver (`chatbot.db`)")
         st.markdown(f"**Current Thread:**\n`{st.session_state['thread_id'][:18]}...`")
 
@@ -464,7 +464,7 @@ with hdr_col2:
             <div style="margin-top: 10px;">
                 <span class="tech-badge-emerald">LangGraph</span>
                 <span class="tech-badge-violet">SQLite Memory</span>
-                <span class="tech-badge-emerald">Groq OpenAI GPT</span>
+                <span class="tech-badge-emerald">Groq Compound Mini</span>
             </div>
         </div>
     </div>

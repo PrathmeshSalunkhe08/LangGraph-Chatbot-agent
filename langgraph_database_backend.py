@@ -12,9 +12,10 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.message import add_messages
 import sqlite3
 
-# Initialize Ultra-Fast Groq LLM (0.6s - 1.5s Response Speed)
+
+# Initialize Groq Compound Mini (0.6s Ultra Fast Speed + High 70,000 Token Limit)
 llm = ChatGroq(
-    model="openai/gpt-oss-20b",
+    model="groq/compound-mini",
     temperature=0.7
 )
 

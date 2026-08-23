@@ -117,13 +117,40 @@ def google_serper_search_tool(query: str) -> str:
         return f"Google Serper Search Error: {e}"
 
 @tool
+def weather_forecast_tool(city: str) -> str:
+    """Use this tool to get live weather forecast, temperature (°C & °F), weather conditions, humidity, and wind speed for any city in the world (e.g. Mumbai, Delhi, London, Tokyo, New York)."""
+    clean_city = city.strip()
+    try:
+        url = f"https://wttr.in/{clean_city}?format=j1"
+        res = requests.get(url, timeout=6).json()
+        curr = res['current_condition'][0]
+        area = res['nearest_area'][0]['areaName'][0]['value']
+        country = res['nearest_area'][0]['country'][0]['value']
+        temp_c = curr['temp_C']
+        temp_f = curr['temp_F']
+        feels_like = curr['FeelsLikeC']
+        desc = curr['weatherDesc'][0]['value']
+        humidity = curr['humidity']
+        wind = curr['windspeedKmph']
+        
+        return (
+            f"Live Weather for {area}, {country}:\n"
+            f"• Temperature: {temp_c}°C ({temp_f}°F) [Feels like: {feels_like}°C]\n"
+            f"• Condition: {desc}\n"
+            f"• Humidity: {humidity}%\n"
+            f"• Wind Speed: {wind} km/h"
+        )
+    except Exception as e:
+        return f"Weather Fetch Error for city '{city}': {e}. Please check the city name."
+
+@tool
 def get_current_time_tool(query: str) -> str:
     """Use this tool to get the current date and time."""
     from datetime import datetime
     return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
 # List of tools and binding to LLM
-tools = [scientific_calculator_tool, stock_crypto_price_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
+tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(

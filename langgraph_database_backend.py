@@ -98,14 +98,14 @@ def google_serper_search_tool(query: str) -> str:
     try:
         url = "https://google.serper.dev/search"
         headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
-        payload = {"q": query}
-        res = requests.post(url, headers=headers, json=payload, timeout=8).json()
+        payload = {"q": query, "gl": "in", "hl": "en", "num": 5}
+        res = requests.post(url, headers=headers, json=payload, timeout=4).json()
         
         results = []
         if "answerBox" in res and "snippet" in res["answerBox"]:
             results.append(f"Direct Answer: {res['answerBox']['snippet']}")
             
-        organic = res.get("organic", [])[:4]
+        organic = res.get("organic", [])[:5]
         for item in organic:
             title = item.get("title", "")
             snippet = item.get("snippet", "")
@@ -114,7 +114,6 @@ def google_serper_search_tool(query: str) -> str:
             
         return "\n".join(results) if results else "No Google search results found."
     except Exception as e:
-     
         return f"Google Serper Search Error: {e}"
 
 WEATHER_CODES = {

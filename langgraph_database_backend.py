@@ -10,9 +10,9 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.message import add_messages
 import sqlite3
 
-# Initialize Groq LLM (Free OpenAI model on Groq)
+# Initialize Groq LLM (High-TPM Free Model: 70,000 tokens/min limit)
 llm = ChatGroq(
-    model="openai/gpt-oss-120b",
+    model="groq/compound-mini",
     temperature=0.7
 )
 
@@ -20,10 +20,12 @@ llm = ChatGroq(
 class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
-# Define conversation node
+# Define conversation node with context windowing to prevent token limit errors
 def Chat_node(state: ChatState):
     messages = state['messages']
-    response = llm.invoke(messages)
+    # Keep the last 10 messages for active conversation context to stay well under token limits
+    recent_messages = messages[-10:] if len(messages) > 10 else messages
+    response = llm.invoke(recent_messages)
     return {"messages": [response]}
 
 # Setup SQLite persistence

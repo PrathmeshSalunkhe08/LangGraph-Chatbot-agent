@@ -464,7 +464,7 @@ with hdr_col2:
             <div style="margin-top: 10px;">
                 <span class="tech-badge-emerald">LangGraph</span>
                 <span class="tech-badge-violet">SQLite Memory</span>
-                <span class="tech-badge-emerald">Llama 3.1</span>
+                <span class="tech-badge-emerald">OpenAI GPT</span>
             </div>
         </div>
     </div>

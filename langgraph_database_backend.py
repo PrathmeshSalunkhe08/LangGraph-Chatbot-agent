@@ -280,19 +280,15 @@ def Chat_node(state: ChatState):
             content_str = str(m.content) if m.content else ""
             if len(content_str) > 600:
                 content_str = content_str[:600] + "... [truncated]"
-            
-            clean_tool_calls = []
-            for tc in getattr(m, 'tool_calls', []):
-                if isinstance(tc, dict) and tc.get('name'):
-                    clean_tool_calls.append(tc)
-            trimmed_msgs.append(AIMessage(content=content_str, tool_calls=clean_tool_calls))
+            # Strip past tool_calls payloads from history sent to LLM to prevent Groq parser exceptions
+            if content_str:
+                trimmed_msgs.append(AIMessage(content=content_str))
         elif isinstance(m, ToolMessage):
+            # Include tool output as clean text context for the model
             content_str = str(m.content)
             if len(content_str) > 600:
                 content_str = content_str[:600] + "... [truncated]"
-            name = getattr(m, 'name', None) or "tool"
-            tool_call_id = getattr(m, 'tool_call_id', None) or "call_default"
-            trimmed_msgs.append(ToolMessage(content=content_str, name=name, tool_call_id=tool_call_id))
+            trimmed_msgs.append(HumanMessage(content=f"[Context from Search Tool]: {content_str}"))
         else:
             trimmed_msgs.append(m)
 

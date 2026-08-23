@@ -12,20 +12,11 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.message import add_messages
 import sqlite3
 
-# Initialize LLM (Uses OpenRouter NVIDIA Nemotron 1M Free model if key is present, else Groq)
-openrouter_key = os.getenv("OPENROUTER_API_KEY")
-if openrouter_key and openrouter_key.strip():
-    llm = ChatOpenAI(
-        model="nvidia/nemotron-3.5-lightning:free",
-        openai_api_key=openrouter_key,
-        openai_api_base="https://openrouter.ai/api/v1",
-        temperature=0.7
-    )
-else:
-    llm = ChatGroq(
-        model="groq/compound-mini",
-        temperature=0.7
-    )
+# Initialize Ultra-Fast Groq LLM (0.6s - 1.5s Response Speed)
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
+    temperature=0.7
+)
 
 # Define state schema
 class ChatState(TypedDict):

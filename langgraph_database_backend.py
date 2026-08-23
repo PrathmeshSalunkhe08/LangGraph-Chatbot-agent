@@ -19,6 +19,12 @@ llm = ChatGroq(
     temperature=0.7
 )
 
+from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
+
+SYSTEM_PROMPT = SystemMessage(
+    content="You are GraphMind AI assistant. Respond in clean Markdown. Do NOT include literal HTML tags like <br> or <br/> inside tables or text lists."
+)
+
 # Define state schema
 class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
@@ -26,7 +32,10 @@ class ChatState(TypedDict):
 # Define conversation node
 def Chat_node(state: ChatState):
     messages = state['messages']
-    response = llm.invoke(messages)
+    input_msgs = [SYSTEM_PROMPT] + (messages[-10:] if len(messages) > 10 else messages)
+    response = llm.invoke(input_msgs)
+    if isinstance(response.content, str):
+        response.content = response.content.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
     return {"messages": [response]}
 
 # Setup SQLite persistence

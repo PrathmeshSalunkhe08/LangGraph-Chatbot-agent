@@ -492,7 +492,8 @@ if not st.session_state['message_history']:
 for message in st.session_state['message_history']:
     msg_avatar = BOT_AVATAR_PATH if message['role'] == 'assistant' else USER_AVATAR_PATH
     with st.chat_message(message['role'], avatar=msg_avatar):
-        st.markdown(message['content'])
+        clean_text = str(message['content']).replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+        st.markdown(clean_text)
 
 # User message input bar
 user_input = st.chat_input("Message GraphMind AI...")
@@ -516,7 +517,8 @@ if user_input:
                     stream_mode="messages"
                 ):
                     if isinstance(chunk, AIMessage) and chunk.content:
-                        yield chunk.content
+                        clean_chunk = str(chunk.content).replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+                        yield clean_chunk
             except Exception as e:
                 yield f"⚠️ **Error generating response:** {str(e)}"
 

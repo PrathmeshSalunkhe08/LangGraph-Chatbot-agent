@@ -19,6 +19,7 @@ ipykernel
 
 google-genai
 langchain-groq
+langchain-openai
 
 streamlit
 

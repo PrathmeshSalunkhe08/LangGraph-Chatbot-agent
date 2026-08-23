@@ -4,28 +4,37 @@ load_dotenv()
 from langgraph.graph import StateGraph, START, END
 from pydantic import BaseModel, Field
 from typing import Literal, TypedDict, Annotated
+import os
 from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, BaseMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.message import add_messages
 import sqlite3
 
-# Initialize Groq LLM (High-TPM Free Model: 70,000 tokens/min limit)
-llm = ChatGroq(
-    model="groq/compound-mini",
-    temperature=0.7
-)
+# Initialize LLM (Uses OpenRouter DeepSeek R1 Free model if key is present, else Groq)
+openrouter_key = os.getenv("OPENROUTER_API_KEY")
+if openrouter_key and openrouter_key.strip():
+    llm = ChatOpenAI(
+        model="deepseek/deepseek-r1:free",
+        openai_api_key=openrouter_key,
+        openai_api_base="https://openrouter.ai/api/v1",
+        temperature=0.7
+    )
+else:
+    llm = ChatGroq(
+        model="groq/compound-mini",
+        temperature=0.7
+    )
 
 # Define state schema
 class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
-# Define conversation node with context windowing to prevent token limit errors
+# Define conversation node
 def Chat_node(state: ChatState):
     messages = state['messages']
-    # Keep the last 10 messages for active conversation context to stay well under token limits
-    recent_messages = messages[-10:] if len(messages) > 10 else messages
-    response = llm.invoke(recent_messages)
+    response = llm.invoke(messages)
     return {"messages": [response]}
 
 # Setup SQLite persistence

@@ -99,14 +99,14 @@ def google_serper_search_tool(query: str) -> str:
     try:
         url = "https://google.serper.dev/search"
         headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
-        payload = {"q": query, "gl": "in", "hl": "en", "num": 4}
-        res = requests.post(url, headers=headers, json=payload, timeout=3).json()
+        payload = {"q": query, "gl": "in", "hl": "en", "num": 3}
+        res = requests.post(url, headers=headers, json=payload, timeout=2).json()
         
         results = []
         if "answerBox" in res and "snippet" in res["answerBox"]:
             results.append(f"Direct Answer: {res['answerBox']['snippet']}")
             
-        organic = res.get("organic", [])[:4]
+        organic = res.get("organic", [])[:3]
         for idx, item in enumerate(organic, 1):
             title = item.get("title", "")
             snippet = item.get("snippet", "")
@@ -251,23 +251,37 @@ class ChatState(TypedDict):
 def Chat_node(state: ChatState):
     raw_messages = state['messages']
     
-    # Clean history: keep only Human messages and final text AI responses (strip intermediate tool payloads)
-    clean_history = []
-    for m in raw_messages:
+    # Preserve recent history including ToolMessages (up to last 6 messages)
+    recent = raw_messages[-6:] if len(raw_messages) > 6 else raw_messages
+    
+    trimmed_msgs = []
+    for m in recent:
         if isinstance(m, HumanMessage):
             content_str = str(m.content)
-            if len(content_str) > 400:
-                content_str = content_str[:400] + "... [truncated]"
-            clean_history.append(HumanMessage(content=content_str))
-        elif isinstance(m, AIMessage) and m.content and not getattr(m, 'tool_calls', None):
-            content_str = str(m.content)
-            if len(content_str) > 400:
-                content_str = content_str[:400] + "... [truncated]"
-            clean_history.append(AIMessage(content=content_str))
+            if len(content_str) > 600:
+                content_str = content_str[:600] + "... [truncated]"
+            trimmed_msgs.append(HumanMessage(content=content_str))
+        elif isinstance(m, AIMessage):
+            content_str = str(m.content) if m.content else ""
+            if len(content_str) > 600:
+                content_str = content_str[:600] + "... [truncated]"
             
-    recent = clean_history[-4:] if len(clean_history) > 4 else clean_history
-    input_msgs = [SYSTEM_PROMPT] + recent
-    
+            clean_tool_calls = []
+            for tc in getattr(m, 'tool_calls', []):
+                if isinstance(tc, dict) and tc.get('name'):
+                    clean_tool_calls.append(tc)
+            trimmed_msgs.append(AIMessage(content=content_str, tool_calls=clean_tool_calls))
+        elif isinstance(m, ToolMessage):
+            content_str = str(m.content)
+            if len(content_str) > 600:
+                content_str = content_str[:600] + "... [truncated]"
+            name = getattr(m, 'name', None) or "tool"
+            tool_call_id = getattr(m, 'tool_call_id', None) or "call_default"
+            trimmed_msgs.append(ToolMessage(content=content_str, name=name, tool_call_id=tool_call_id))
+        else:
+            trimmed_msgs.append(m)
+
+    input_msgs = [SYSTEM_PROMPT] + trimmed_msgs
     try:
         response = llm_with_tools.invoke(input_msgs)
     except Exception as e:

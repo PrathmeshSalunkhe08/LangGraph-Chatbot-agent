@@ -208,7 +208,19 @@ def Chat_node(state: ChatState):
             content_str = str(m.content)
             if len(content_str) > 800:
                 content_str = content_str[:800] + "... [context truncated]"
-            trimmed_msgs.append(AIMessage(content=content_str, tool_calls=getattr(m, 'tool_calls', [])))
+            
+            clean_tool_calls = []
+            for tc in getattr(m, 'tool_calls', []):
+                if isinstance(tc, dict) and tc.get('name'):
+                    clean_tool_calls.append(tc)
+            trimmed_msgs.append(AIMessage(content=content_str, tool_calls=clean_tool_calls))
+        elif isinstance(m, ToolMessage):
+            content_str = str(m.content)
+            if len(content_str) > 800:
+                content_str = content_str[:800] + "... [context truncated]"
+            name = getattr(m, 'name', None) or "tool"
+            tool_call_id = getattr(m, 'tool_call_id', None) or "call_default"
+            trimmed_msgs.append(ToolMessage(content=content_str, name=name, tool_call_id=tool_call_id))
         else:
             trimmed_msgs.append(m)
 

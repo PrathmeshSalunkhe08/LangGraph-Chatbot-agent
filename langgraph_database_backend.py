@@ -55,14 +55,37 @@ def workspace_file_reader(filename: str) -> str:
     except Exception as e:
         return f"Error reading file: {e}"
 
+import requests
+
 @tool
-def get_current_time_tool(query: str) -> str:
-    """Use this tool to get the current date and time."""
-    from datetime import datetime
-    return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+def google_serper_search_tool(query: str) -> str:
+    """Use this tool to search Google for live news, real-time events, current sports scores, documentation, and facts."""
+    api_key = os.getenv("SERPER_API_KEY")
+    if not api_key or not api_key.strip():
+        return "Google Serper API key not configured in .env."
+    try:
+        url = "https://google.serper.dev/search"
+        headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
+        payload = {"q": query}
+        res = requests.post(url, headers=headers, json=payload, timeout=8).json()
+        
+        results = []
+        if "answerBox" in res and "snippet" in res["answerBox"]:
+            results.append(f"Direct Answer: {res['answerBox']['snippet']}")
+            
+        organic = res.get("organic", [])[:4]
+        for item in organic:
+            title = item.get("title", "")
+            snippet = item.get("snippet", "")
+            link = item.get("link", "")
+            results.append(f"• [{title}]({link}): {snippet}")
+            
+        return "\n".join(results) if results else "No Google search results found."
+    except Exception as e:
+        return f"Google Serper Search Error: {e}"
 
 # List of tools and binding to LLM
-tools = [scientific_calculator_tool, workspace_file_reader, get_current_time_tool]
+tools = [scientific_calculator_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(

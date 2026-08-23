@@ -98,21 +98,21 @@ def google_serper_search_tool(query: str) -> str:
     try:
         url = "https://google.serper.dev/search"
         headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
-        payload = {"q": query, "gl": "in", "hl": "en", "num": 5}
-        res = requests.post(url, headers=headers, json=payload, timeout=4).json()
+        payload = {"q": query, "gl": "in", "hl": "en", "num": 8}
+        res = requests.post(url, headers=headers, json=payload, timeout=10).json()
         
         results = []
         if "answerBox" in res and "snippet" in res["answerBox"]:
             results.append(f"Direct Answer: {res['answerBox']['snippet']}")
             
-        organic = res.get("organic", [])[:5]
+        organic = res.get("organic", [])[:10]
         for item in organic:
             title = item.get("title", "")
             snippet = item.get("snippet", "")
             link = item.get("link", "")
-            results.append(f"• [{title}]({link}): {snippet}")
+            results.append(f"• Title: {title} | Link: {link}\n  Snippet: {snippet}")
             
-        return "\n".join(results) if results else "No Google search results found."
+        return "\n\n".join(results) if results else "No Google search results found."
     except Exception as e:
         return f"Google Serper Search Error: {e}"
 
@@ -168,6 +168,62 @@ def weather_forecast_tool(city: str) -> str:
     except Exception as e:
         return f"Weather Fetch Error for city '{city}': {e}."
 
+LANG_MAP = {
+    "hindi": "hi", "marathi": "mr", "spanish": "es", "french": "fr",
+    "german": "de", "japanese": "ja", "chinese": "zh", "russian": "ru",
+    "arabic": "ar", "portuguese": "pt", "italian": "it", "gujarati": "gu", "bengali": "bn"
+}
+
+@tool
+def language_translator_tool(text_and_target_language: str) -> str:
+    """Use this tool to translate text into target languages (e.g. Hindi, Marathi, German, Spanish, French, Japanese, etc.).
+    Input format string: 'text_to_translate | target_language'."""
+    try:
+        if "|" in text_and_target_language:
+            parts = text_and_target_language.split("|")
+            text = parts[0].strip()
+            target_lang = parts[1].strip().lower()
+        else:
+            text = text_and_target_language.strip()
+            target_lang = "hindi"
+            
+        lang_code = LANG_MAP.get(target_lang, target_lang[:2])
+        url = f"https://api.mymemory.translated.net/get?q={requests.utils.quote(text)}&langpair=en|{lang_code}"
+        res = requests.get(url, timeout=6).json()
+        translated = res.get("responseData", {}).get("translatedText", text)
+        
+        return f"Translation ({target_lang.capitalize()}): {translated}"
+    except Exception as e:
+        return f"Translation Error: {e}"
+
+@tool
+def wikipedia_research_tool(query_topic: str) -> str:
+    """Use this tool to search Wikipedia for deep encyclopedic summaries, historical facts, scientific concepts, biographies, and geographical details."""
+    clean_topic = query_topic.strip().replace(" ", "_")
+    headers = {"User-Agent": "GraphMindAI/1.0 (Educational Assistant)"}
+    try:
+        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(clean_topic)}"
+        res = requests.get(url, headers=headers, timeout=6).json()
+        
+        if res.get("type") == "https://mediawiki.org/wiki/HyperSwitch/errors/not_found":
+            search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={requests.utils.quote(query_topic)}&format=json"
+            search_res = requests.get(search_url, headers=headers, timeout=6).json()
+            search_items = search_res.get("query", {}).get("search", [])
+            if search_items:
+                first_title = search_items[0]["title"].replace(" ", "_")
+                url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(first_title)}"
+                res = requests.get(url, headers=headers, timeout=6).json()
+            else:
+                return f"No Wikipedia article found for '{query_topic}'."
+                
+        title = res.get("title", query_topic)
+        extract = res.get("extract", "No summary available.")
+        page_url = res.get("content_urls", {}).get("desktop", {}).get("page", "")
+        
+        return f"Wikipedia Summary: **{title}**\n\n{extract}\n\nRead more: {page_url}"
+    except Exception as e:
+        return f"Wikipedia Fetch Error for '{query_topic}': {e}"
+
 @tool
 def get_current_time_tool(query: str) -> str:
     """Use this tool to get the current date and time."""
@@ -175,15 +231,16 @@ def get_current_time_tool(query: str) -> str:
     return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
 # List of tools and binding to LLM
-tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
+tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, language_translator_tool, wikipedia_research_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(
     content=(
-        "You are GraphMind AI, an elite, professional AI assistant. "
-        "When using tools to fetch data, present the answers directly, cleanly, and professionally in beautiful Markdown. "
-        "CRITICAL INSTRUCTION: NEVER mention internal tool names (e.g., do NOT write 'stock_crypto_price_tool', 'weather_forecast_tool', 'fetched via tool', or similar technical notes) in your response to the user. "
-        "Deliver polished, direct, executive-ready answers."
+        "You are GraphMind AI, an elite, professional AI assistant matching ChatGPT and Claude standards.\n"
+        "1. When using tools to search for news, events, or list of topics, DO NOT simply output raw bullet snippets or URLs returned by the tool.\n"
+        "2. Digest and synthesize the search data into a clean, well-formatted, numbered list (1., 2., 3., etc.) with bold headlines, clear explanations, and a short summary conclusion, exactly like ChatGPT.\n"
+        "3. NEVER mention internal tool names (e.g., do NOT write 'stock_crypto_price_tool', 'weather_forecast_tool', 'google_serper_search_tool', or 'fetched via tool').\n"
+        "4. Deliver polished, beautiful, executive-ready answers in clean Markdown."
     )
 )
 

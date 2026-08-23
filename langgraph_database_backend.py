@@ -168,6 +168,34 @@ def weather_forecast_tool(city: str) -> str:
     except Exception as e:
         return f"Weather Fetch Error for city '{city}': {e}."
 
+LANG_MAP = {
+    "hindi": "hi", "marathi": "mr", "spanish": "es", "french": "fr",
+    "german": "de", "japanese": "ja", "chinese": "zh", "russian": "ru",
+    "arabic": "ar", "portuguese": "pt", "italian": "it", "gujarati": "gu", "bengali": "bn"
+}
+
+@tool
+def language_translator_tool(text_and_target_language: str) -> str:
+    """Use this tool to translate text into target languages (e.g. Hindi, Marathi, German, Spanish, French, Japanese, etc.).
+    Input format string: 'text_to_translate | target_language' (e.g., 'Welcome to GraphMind AI | Hindi' or 'Welcome to GraphMind AI | German')."""
+    try:
+        if "|" in text_and_target_language:
+            parts = text_and_target_language.split("|")
+            text = parts[0].strip()
+            target_lang = parts[1].strip().lower()
+        else:
+            text = text_and_target_language.strip()
+            target_lang = "hindi"
+            
+        lang_code = LANG_MAP.get(target_lang, target_lang[:2])
+        url = f"https://api.mymemory.translated.net/get?q={requests.utils.quote(text)}&langpair=en|{lang_code}"
+        res = requests.get(url, timeout=6).json()
+        translated = res.get("responseData", {}).get("translatedText", text)
+        
+        return f"Translation ({target_lang.capitalize()}): {translated}"
+    except Exception as e:
+        return f"Translation Error: {e}"
+
 @tool
 def get_current_time_tool(query: str) -> str:
     """Use this tool to get the current date and time."""
@@ -175,7 +203,7 @@ def get_current_time_tool(query: str) -> str:
     return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
 # List of tools and binding to LLM
-tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
+tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, language_translator_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(

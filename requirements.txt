@@ -20,6 +20,7 @@ ipykernel
 google-genai
 langchain-groq
 langchain-openai
+yfinance
 
 streamlit
 

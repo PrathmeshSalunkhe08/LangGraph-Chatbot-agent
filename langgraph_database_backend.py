@@ -56,6 +56,38 @@ def workspace_file_reader(filename: str) -> str:
         return f"Error reading file: {e}"
 
 import requests
+import yfinance as yf
+
+@tool
+def stock_crypto_price_tool(symbol_or_name: str) -> str:
+    """Use this tool to get the live price, daily high/low, and market summary for stocks (e.g. AAPL, TSLA, MSFT, RELIANCE.NS) or Crypto (e.g. bitcoin, ethereum, solana, dogecoin)."""
+    clean = symbol_or_name.strip().lower()
+    
+    # 1. Try Crypto price check via CoinGecko API
+    try:
+        url = f"https://api.coingecko.com/api/v3/simple/price?ids={clean}&vs_currencies=usd&include_24hr_change=true"
+        res = requests.get(url, timeout=5).json()
+        if clean in res:
+            price = res[clean]['usd']
+            change = res[clean].get('usd_24h_change', 0.0)
+            return f"Live Crypto ({clean.upper()}): ${price:,.2f} USD (24h Change: {change:+.2f}%)"
+    except Exception:
+        pass
+        
+    # 2. Try Stock ticker price check via Yahoo Finance
+    try:
+        ticker = yf.Ticker(symbol_or_name.upper())
+        hist = ticker.history(period="1d")
+        if not hist.empty:
+            last_price = hist['Close'].iloc[-1]
+            open_price = hist['Open'].iloc[-1]
+            high_price = hist['High'].iloc[-1]
+            low_price = hist['Low'].iloc[-1]
+            return f"Live Stock ({symbol_or_name.upper()}): Current Price: ${last_price:.2f} USD | Open: ${open_price:.2f} | High: ${high_price:.2f} | Low: ${low_price:.2f}"
+    except Exception as e:
+        return f"Market Data Error for '{symbol_or_name}': {e}"
+        
+    return f"Could not find live market data for symbol '{symbol_or_name}'. Try using stock tickers like AAPL, TSLA, NVDA or crypto names like bitcoin, ethereum."
 
 @tool
 def google_serper_search_tool(query: str) -> str:
@@ -84,8 +116,14 @@ def google_serper_search_tool(query: str) -> str:
     except Exception as e:
         return f"Google Serper Search Error: {e}"
 
+@tool
+def get_current_time_tool(query: str) -> str:
+    """Use this tool to get the current date and time."""
+    from datetime import datetime
+    return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
 # List of tools and binding to LLM
-tools = [scientific_calculator_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
+tools = [scientific_calculator_tool, stock_crypto_price_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(

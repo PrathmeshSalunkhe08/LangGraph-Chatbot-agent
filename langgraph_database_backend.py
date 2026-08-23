@@ -45,24 +45,13 @@ def workspace_file_reader(filename: str) -> str:
         return f"Error reading file: {e}"
 
 @tool
-def database_inspector(query_type: str) -> str:
-    """Use this tool to check live statistics and thread counts stored in the chatbot.db SQLite database."""
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT count(distinct thread_id) FROM checkpoints")
-        count = cursor.fetchone()[0]
-        return f"Database Statistics: Total active conversation threads in chatbot.db = {count}"
-    except Exception as e:
-        return f"Database error: {e}"
-
-@tool
 def get_current_time_tool(query: str) -> str:
     """Use this tool to get the current date and time."""
     from datetime import datetime
     return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
 # List of tools and binding to LLM
-tools = [calculator_tool, workspace_file_reader, database_inspector, get_current_time_tool]
+tools = [calculator_tool, workspace_file_reader, get_current_time_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(

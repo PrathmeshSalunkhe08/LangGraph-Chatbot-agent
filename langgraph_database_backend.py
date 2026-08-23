@@ -13,10 +13,11 @@ from langgraph.graph.message import add_messages
 import sqlite3
 
 
-# Initialize Groq LLM with native Tool Calling support (0.8s Speed)
+# Initialize Groq LLM with native Tool Calling support (0.8s Speed, auto-retry on rate limit)
 llm = ChatGroq(
     model="openai/gpt-oss-20b",
-    temperature=0.7
+    temperature=0.7,
+    max_retries=3
 )
 
 from langchain_core.tools import tool
@@ -249,19 +250,19 @@ class ChatState(TypedDict):
 # Define conversation node
 def Chat_node(state: ChatState):
     raw_messages = state['messages']
-    recent = raw_messages[-6:] if len(raw_messages) > 6 else raw_messages
+    recent = raw_messages[-4:] if len(raw_messages) > 4 else raw_messages
     
     trimmed_msgs = []
     for m in recent:
         if isinstance(m, HumanMessage):
             content_str = str(m.content)
-            if len(content_str) > 800:
-                content_str = content_str[:800] + "... [context truncated]"
+            if len(content_str) > 400:
+                content_str = content_str[:400] + "... [truncated]"
             trimmed_msgs.append(HumanMessage(content=content_str))
         elif isinstance(m, AIMessage):
             content_str = str(m.content)
-            if len(content_str) > 800:
-                content_str = content_str[:800] + "... [context truncated]"
+            if len(content_str) > 400:
+                content_str = content_str[:400] + "... [truncated]"
             
             clean_tool_calls = []
             for tc in getattr(m, 'tool_calls', []):
@@ -270,8 +271,8 @@ def Chat_node(state: ChatState):
             trimmed_msgs.append(AIMessage(content=content_str, tool_calls=clean_tool_calls))
         elif isinstance(m, ToolMessage):
             content_str = str(m.content)
-            if len(content_str) > 800:
-                content_str = content_str[:800] + "... [context truncated]"
+            if len(content_str) > 400:
+                content_str = content_str[:400] + "... [truncated]"
             name = getattr(m, 'name', None) or "tool"
             tool_call_id = getattr(m, 'tool_call_id', None) or "call_default"
             trimmed_msgs.append(ToolMessage(content=content_str, name=name, tool_call_id=tool_call_id))
@@ -279,7 +280,11 @@ def Chat_node(state: ChatState):
             trimmed_msgs.append(m)
 
     input_msgs = [SYSTEM_PROMPT] + trimmed_msgs
-    response = llm_with_tools.invoke(input_msgs)
+    try:
+        response = llm_with_tools.invoke(input_msgs)
+    except Exception as e:
+        response = AIMessage(content=f"⚠️ **Rate Limit Note:** {str(e)[:150]}. Please wait a moment before sending your next request.")
+        
     if isinstance(response.content, str):
         response.content = response.content.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
     return {"messages": [response]}

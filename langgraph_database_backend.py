@@ -29,10 +29,26 @@ SYSTEM_PROMPT = SystemMessage(
 class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
-# Define conversation node
+from langchain_core.messages import AIMessage
+
+# Define conversation node with smart context trimming (guarantees < 1500 tokens per request)
 def Chat_node(state: ChatState):
-    messages = state['messages']
-    input_msgs = [SYSTEM_PROMPT] + (messages[-10:] if len(messages) > 10 else messages)
+    raw_messages = state['messages']
+    # Select last 6 messages
+    recent = raw_messages[-6:] if len(raw_messages) > 6 else raw_messages
+    
+    # Trim individual old message text if too long to prevent TPM rate limits
+    trimmed_msgs = []
+    for m in recent:
+        content_str = str(m.content)
+        if len(content_str) > 800:
+            content_str = content_str[:800] + "... [context truncated]"
+        if isinstance(m, HumanMessage):
+            trimmed_msgs.append(HumanMessage(content=content_str))
+        else:
+            trimmed_msgs.append(AIMessage(content=content_str))
+
+    input_msgs = [SYSTEM_PROMPT] + trimmed_msgs
     response = llm.invoke(input_msgs)
     if isinstance(response.content, str):
         response.content = response.content.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")

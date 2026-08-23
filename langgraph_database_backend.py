@@ -197,13 +197,41 @@ def language_translator_tool(text_and_target_language: str) -> str:
         return f"Translation Error: {e}"
 
 @tool
+def wikipedia_research_tool(query_topic: str) -> str:
+    """Use this tool to search Wikipedia for deep encyclopedic summaries, historical facts, scientific concepts, biographies, and geographical details."""
+    clean_topic = query_topic.strip().replace(" ", "_")
+    headers = {"User-Agent": "GraphMindAI/1.0 (Educational Assistant)"}
+    try:
+        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(clean_topic)}"
+        res = requests.get(url, headers=headers, timeout=6).json()
+        
+        if res.get("type") == "https://mediawiki.org/wiki/HyperSwitch/errors/not_found":
+            search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={requests.utils.quote(query_topic)}&format=json"
+            search_res = requests.get(search_url, headers=headers, timeout=6).json()
+            search_items = search_res.get("query", {}).get("search", [])
+            if search_items:
+                first_title = search_items[0]["title"].replace(" ", "_")
+                url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(first_title)}"
+                res = requests.get(url, headers=headers, timeout=6).json()
+            else:
+                return f"No Wikipedia article found for '{query_topic}'."
+                
+        title = res.get("title", query_topic)
+        extract = res.get("extract", "No summary available.")
+        page_url = res.get("content_urls", {}).get("desktop", {}).get("page", "")
+        
+        return f"Wikipedia Summary: **{title}**\n\n{extract}\n\nRead more: {page_url}"
+    except Exception as e:
+        return f"Wikipedia Fetch Error for '{query_topic}': {e}"
+
+@tool
 def get_current_time_tool(query: str) -> str:
     """Use this tool to get the current date and time."""
     from datetime import datetime
     return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
 # List of tools and binding to LLM
-tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, language_translator_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
+tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, language_translator_tool, wikipedia_research_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(

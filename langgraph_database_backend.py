@@ -23,15 +23,26 @@ from langchain_core.tools import tool
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage, BaseMessage
 
+import math
+
 # Define Useful Agent Tools
 @tool
-def calculator_tool(expression: str) -> str:
-    """Use this tool to calculate mathematical expressions precisely (e.g., 25 * 40 + 150)."""
+def scientific_calculator_tool(expression: str) -> str:
+    """Use this tool for ANY mathematical or scientific calculations (arithmetic, trigonometry, logarithms, exponentials, factorials, square roots, geometry).
+    Available functions: sin, cos, tan, asin, acos, atan, radians, degrees, log, log10, log2, exp, sqrt, factorial, comb, perm, gcd, pi, e, pow, abs, round.
+    Examples: 'sin(radians(30)) + log10(100)', 'factorial(10) / sqrt(144)', 'pi * pow(5, 2)'."""
     try:
-        result = eval(expression, {"__builtins__": None}, {})
-        return f"Calculated Result: {result}"
+        safe_scope = {k: v for k, v in math.__dict__.items() if not k.startswith('_')}
+        safe_scope.update({
+            'abs': abs, 'round': round, 'min': min, 'max': max,
+            'sum': sum, 'pow': pow
+        })
+        result = eval(expression, {"__builtins__": None}, safe_scope)
+        if isinstance(result, float):
+            result = round(result, 8)
+        return f"Scientific Calculation Output: {result}"
     except Exception as e:
-        return f"Math Error: {e}"
+        return f"Calculation Error: {e}. Use standard math syntax e.g., sin(radians(30)), sqrt(16), log10(100), factorial(5), pi, pow(x, y)."
 
 @tool
 def workspace_file_reader(filename: str) -> str:
@@ -51,7 +62,7 @@ def get_current_time_tool(query: str) -> str:
     return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
 # List of tools and binding to LLM
-tools = [calculator_tool, workspace_file_reader, get_current_time_tool]
+tools = [scientific_calculator_tool, workspace_file_reader, get_current_time_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(

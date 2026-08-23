@@ -10,9 +10,9 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.message import add_messages
 import sqlite3
 
-# Initialize Groq LLM
+# Initialize Groq LLM (Free OpenAI model on Groq)
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model="openai/gpt-oss-120b",
     temperature=0.7
 )
 

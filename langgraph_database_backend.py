@@ -275,6 +275,11 @@ def Chat_node(state: ChatState):
         
     if isinstance(response.content, str):
         response.content = response.content.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+        
+    # Guard against empty response content + empty tool calls
+    if not response.content and not getattr(response, 'tool_calls', None):
+        response.content = "I'm ready! How can I assist you with news, weather, stock prices, math, or research today?"
+        
     return {"messages": [response]}
 
 # Setup SQLite persistence

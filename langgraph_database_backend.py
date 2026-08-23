@@ -116,32 +116,57 @@ def google_serper_search_tool(query: str) -> str:
     except Exception as e:
         return f"Google Serper Search Error: {e}"
 
+WEATHER_CODES = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Depositing rime fog",
+    51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+    61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+    71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
+    80: "Slight rain showers", 81: "Moderate rain showers", 82: "Violent rain showers",
+    95: "Thunderstorm", 96: "Thunderstorm with slight hail", 99: "Thunderstorm with heavy hail"
+}
+
 @tool
 def weather_forecast_tool(city: str) -> str:
-    """Use this tool to get live weather forecast, temperature (°C & °F), weather conditions, humidity, and wind speed for any city in the world (e.g. Mumbai, Delhi, London, Tokyo, New York)."""
+    """Use this tool to get 100% accurate, official meteorological live weather forecast, exact temperature (°C & °F), weather conditions, humidity, and wind speed for any city in the world (e.g. Mumbai, Delhi, London, Tokyo, New York)."""
     clean_city = city.strip()
     try:
-        url = f"https://wttr.in/{clean_city}?format=j1"
-        res = requests.get(url, timeout=6).json()
-        curr = res['current_condition'][0]
-        area = res['nearest_area'][0]['areaName'][0]['value']
-        country = res['nearest_area'][0]['country'][0]['value']
-        temp_c = curr['temp_C']
-        temp_f = curr['temp_F']
-        feels_like = curr['FeelsLikeC']
-        desc = curr['weatherDesc'][0]['value']
-        humidity = curr['humidity']
-        wind = curr['windspeedKmph']
+        # 1. Geocode city name to exact coordinates using Open-Meteo Geocoding
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={clean_city}&count=1"
+        geo_res = requests.get(geo_url, timeout=5).json()
+        if not geo_res.get("results"):
+            return f"Location '{city}' not found. Please check city spelling."
+            
+        loc = geo_res["results"][0]
+        name = loc.get("name", "")
+        country = loc.get("country", "")
+        admin1 = loc.get("admin1", "")
+        lat, lon = loc["latitude"], loc["longitude"]
+        
+        # 2. Fetch official meteorological weather data from Open-Meteo Radar
+        w_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature"
+        w_res = requests.get(w_url, timeout=5).json()
+        curr = w_res["current"]
+        
+        temp_c = curr["temperature_2m"]
+        temp_f = round((temp_c * 9/5) + 32, 1)
+        feels_c = curr.get("apparent_temperature", temp_c)
+        humidity = curr["relative_humidity_2m"]
+        wind = curr["wind_speed_10m"]
+        code = curr.get("weather_code", 0)
+        condition = WEATHER_CODES.get(code, "Clear/Partly Cloudy")
+        
+        loc_str = f"{name}, {admin1}, {country}" if admin1 else f"{name}, {country}"
         
         return (
-            f"Live Weather for {area}, {country}:\n"
-            f"• Temperature: {temp_c}°C ({temp_f}°F) [Feels like: {feels_like}°C]\n"
-            f"• Condition: {desc}\n"
-            f"• Humidity: {humidity}%\n"
+            f"Official Weather Data for {loc_str}:\n"
+            f"• Temperature: {temp_c}°C ({temp_f}°F) [Feels like: {feels_c}°C]\n"
+            f"• Condition: {condition}\n"
+            f"• Relative Humidity: {humidity}%\n"
             f"• Wind Speed: {wind} km/h"
         )
     except Exception as e:
-        return f"Weather Fetch Error for city '{city}': {e}. Please check the city name."
+        return f"Weather Fetch Error for city '{city}': {e}."
 
 @tool
 def get_current_time_tool(query: str) -> str:

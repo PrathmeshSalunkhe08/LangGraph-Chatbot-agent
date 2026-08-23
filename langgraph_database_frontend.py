@@ -510,18 +510,12 @@ if user_input:
     # 3. Stream AI assistant response
     with st.chat_message("assistant", avatar=BOT_AVATAR_PATH):
         def ai_stream_generator():
-            status_indicated = False
             try:
                 for chunk, metadata in chatbot.stream(
                     {"messages": [HumanMessage(content=user_input)]},
                     config=config,
                     stream_mode="messages"
                 ):
-                    # Instant status feedback when tool call begins
-                    if isinstance(chunk, AIMessage) and getattr(chunk, 'tool_calls', None) and not status_indicated:
-                        status_indicated = True
-                        yield "🔍 *Searching live web data & processing...*\n\n"
-                        
                     if isinstance(chunk, AIMessage) and chunk.content:
                         clean_chunk = str(chunk.content).replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
                         yield clean_chunk

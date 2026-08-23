@@ -106,11 +106,11 @@ def google_serper_search_tool(query: str) -> str:
         if "answerBox" in res and "snippet" in res["answerBox"]:
             results.append(f"Direct Answer: {res['answerBox']['snippet']}")
             
-        organic = res.get("organic", [])[:3]
+        organic = res.get("organic", [])[:5]
         for idx, item in enumerate(organic, 1):
             title = item.get("title", "")
             snippet = item.get("snippet", "")
-            results.append(f"BACKGROUND ITEM {idx}:\nHeadline: {title}\nDetails: {snippet}")
+            results.append(f"Result {idx}: {title}\nDetails: {snippet}")
             
         return "\n\n".join(results) if results else "No Google search results found."
     except Exception as e:

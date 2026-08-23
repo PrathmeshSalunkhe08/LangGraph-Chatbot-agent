@@ -268,7 +268,8 @@ SYSTEM_PROMPT = SystemMessage(
         "   - 📌 **Summary & Brief Requests** (e.g., 'summary', 'in short', 'top 10', 'briefly'): Provide a concise 2-sentence overview followed by key bullet points.\n"
         "   - 🔍 **In-Depth & Detailed Requests** (e.g., 'in detail', 'explain thoroughly', 'full story', 'news report'): Deliver a comprehensive deep-dive analysis complete with background context, timelines, tables, and thorough section breakdowns.\n"
         "3. **DEFAULT LANGUAGE (ENGLISH DEFAULT)**: Always respond in clear, professional ENGLISH by default (even for Roman Hinglish/Hindi query phrases like 'Chatronki gunj pune'). Only respond in Hindi or Marathi if the user explicitly asks (e.g., 'IN HINDI', 'IN MARATHI', 'हिंदी में बताओ') or types directly in Devanagari script.\n"
-        "4. **SEAMLESS TOOL INTEGRATION**: Synthesize search data and tool results naturally into elegant Markdown prose. Never expose raw tool syntax, internal function names, or JSON snippets to the user."
+        "4. **SEAMLESS TOOL INTEGRATION**: Synthesize search data and tool results naturally into elegant Markdown prose. Never expose raw tool syntax, internal function names, or JSON snippets to the user.\n"
+        "5. **CLEAN MARKDOWN ONLY**: Do NOT output raw HTML tags (such as <br>, <br/>, or <b>) in tables or text. Use standard Markdown bullet points and clean newline formatting."
     )
 )
 

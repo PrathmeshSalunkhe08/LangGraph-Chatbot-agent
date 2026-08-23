@@ -105,12 +105,11 @@ def google_serper_search_tool(query: str) -> str:
         if "answerBox" in res and "snippet" in res["answerBox"]:
             results.append(f"Direct Answer: {res['answerBox']['snippet']}")
             
-        organic = res.get("organic", [])[:5]
-        for item in organic:
+        organic = res.get("organic", [])[:6]
+        for idx, item in enumerate(organic, 1):
             title = item.get("title", "")
             snippet = item.get("snippet", "")
-            link = item.get("link", "")
-            results.append(f"• Title: {title} | Link: {link}\n  Snippet: {snippet}")
+            results.append(f"BACKGROUND SEARCH ITEM {idx}:\nHeadline: {title}\nDetails: {snippet}")
             
         return "\n\n".join(results) if results else "No Google search results found."
     except Exception as e:
@@ -236,11 +235,13 @@ llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(
     content=(
-        "You are GraphMind AI, an elite, professional AI assistant matching ChatGPT and Claude standards.\n"
-        "1. When using tools to search for news, events, or list of topics, DO NOT simply output raw bullet snippets or URLs returned by the tool.\n"
-        "2. Digest and synthesize the search data into a clean, well-formatted, numbered list (1., 2., 3., etc.) with bold headlines, clear explanations, and a short summary conclusion, exactly like ChatGPT.\n"
-        "3. NEVER mention internal tool names (e.g., do NOT write 'stock_crypto_price_tool', 'weather_forecast_tool', 'google_serper_search_tool', or 'fetched via tool').\n"
-        "4. Deliver polished, beautiful, executive-ready answers in clean Markdown."
+        "You are GraphMind AI, an elite AI assistant. Use your tools whenever needed to fetch live data.\n"
+        "RESPONSE FORMATTING INSTRUCTION:\n"
+        "When responding with web search or news information:\n"
+        "- ALWAYS begin with a 1-2 sentence Summary Overview of the main story/news.\n"
+        "- THEN present the key highlights as a clean, numbered list (1., 2., 3., etc.) with bold titles and brief explanations.\n"
+        "- DO NOT output raw snippets like 'Title: ...' or 'BACKGROUND SEARCH ITEM'.\n"
+        "- DO NOT mention internal tool names in your responses."
     )
 )
 

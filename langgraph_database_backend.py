@@ -267,7 +267,7 @@ SYSTEM_PROMPT = SystemMessage(
         "   - ⚡ **Conversational & Simple Queries** (e.g., 'hi', 'who is X', 'what is Y'): Give a direct, warm, conversational, and well-structured answer.\n"
         "   - 📌 **Summary & Brief Requests** (e.g., 'summary', 'in short', 'top 10', 'briefly'): Provide a concise 2-sentence overview followed by key bullet points.\n"
         "   - 🔍 **In-Depth & Detailed Requests** (e.g., 'in detail', 'explain thoroughly', 'full story', 'news report'): Deliver a comprehensive deep-dive analysis complete with background context, timelines, tables, and thorough section breakdowns.\n"
-        "3. **MULTILINGUAL FLUENCY**: Respond natively in the exact language requested or used by the user (English, Hindi, Marathi, Hinglish, etc.) with flawless grammar and natural tone.\n"
+        "3. **DEFAULT LANGUAGE (ENGLISH DEFAULT)**: Always respond in clear, professional ENGLISH by default (even for Roman Hinglish/Hindi query phrases like 'Chatronki gunj pune'). Only respond in Hindi or Marathi if the user explicitly asks (e.g., 'IN HINDI', 'IN MARATHI', 'हिंदी में बताओ') or types directly in Devanagari script.\n"
         "4. **SEAMLESS TOOL INTEGRATION**: Synthesize search data and tool results naturally into elegant Markdown prose. Never expose raw tool syntax, internal function names, or JSON snippets to the user."
     )
 )

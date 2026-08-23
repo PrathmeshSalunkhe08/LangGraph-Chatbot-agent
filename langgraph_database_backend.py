@@ -235,13 +235,10 @@ llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(
     content=(
-        "You are GraphMind AI, an elite AI assistant. Use your tools whenever needed to fetch live data.\n"
-        "RESPONSE FORMATTING INSTRUCTION:\n"
-        "When responding with web search or news information:\n"
-        "- ALWAYS begin with a 1-2 sentence Summary Overview of the main story/news.\n"
-        "- THEN present the key highlights as a clean, numbered list (1., 2., 3., etc.) with bold titles and brief explanations.\n"
-        "- DO NOT output raw snippets like 'Title: ...' or 'BACKGROUND SEARCH ITEM'.\n"
-        "- DO NOT mention internal tool names in your responses."
+        "You are GraphMind AI, an intelligent assistant equipped with tools. "
+        "Use your available tools when necessary to solve user queries accurately. "
+        "When summarizing search results or news, begin with a brief summary overview and present the key points as a clean, numbered list in Markdown. "
+        "Do not output raw tool strings or internal tool names."
     )
 )
 

@@ -13,9 +13,9 @@ from langgraph.graph.message import add_messages
 import sqlite3
 
 
-# Initialize Groq LLM with native Tool Calling support (0.8s Speed, auto-retry on rate limit)
+# Initialize Groq LLM with native Tool Calling support (GPT-OSS-120B - 500k daily tokens, 0.8s speed)
 llm = ChatGroq(
-    model="openai/gpt-oss-20b",
+    model="openai/gpt-oss-120b",
     temperature=0.7,
     max_retries=3
 )
@@ -250,40 +250,28 @@ class ChatState(TypedDict):
 # Define conversation node
 def Chat_node(state: ChatState):
     raw_messages = state['messages']
-    recent = raw_messages[-4:] if len(raw_messages) > 4 else raw_messages
     
-    trimmed_msgs = []
-    for m in recent:
+    # Clean history: keep only Human messages and final text AI responses (strip intermediate tool payloads)
+    clean_history = []
+    for m in raw_messages:
         if isinstance(m, HumanMessage):
             content_str = str(m.content)
             if len(content_str) > 400:
                 content_str = content_str[:400] + "... [truncated]"
-            trimmed_msgs.append(HumanMessage(content=content_str))
-        elif isinstance(m, AIMessage):
+            clean_history.append(HumanMessage(content=content_str))
+        elif isinstance(m, AIMessage) and m.content and not getattr(m, 'tool_calls', None):
             content_str = str(m.content)
             if len(content_str) > 400:
                 content_str = content_str[:400] + "... [truncated]"
+            clean_history.append(AIMessage(content=content_str))
             
-            clean_tool_calls = []
-            for tc in getattr(m, 'tool_calls', []):
-                if isinstance(tc, dict) and tc.get('name'):
-                    clean_tool_calls.append(tc)
-            trimmed_msgs.append(AIMessage(content=content_str, tool_calls=clean_tool_calls))
-        elif isinstance(m, ToolMessage):
-            content_str = str(m.content)
-            if len(content_str) > 400:
-                content_str = content_str[:400] + "... [truncated]"
-            name = getattr(m, 'name', None) or "tool"
-            tool_call_id = getattr(m, 'tool_call_id', None) or "call_default"
-            trimmed_msgs.append(ToolMessage(content=content_str, name=name, tool_call_id=tool_call_id))
-        else:
-            trimmed_msgs.append(m)
-
-    input_msgs = [SYSTEM_PROMPT] + trimmed_msgs
+    recent = clean_history[-4:] if len(clean_history) > 4 else clean_history
+    input_msgs = [SYSTEM_PROMPT] + recent
+    
     try:
         response = llm_with_tools.invoke(input_msgs)
     except Exception as e:
-        response = AIMessage(content=f"⚠️ **Rate Limit Note:** {str(e)[:150]}. Please wait a moment before sending your next request.")
+        response = AIMessage(content=f"⚠️ **Note:** {str(e)[:150]}. Please try again.")
         
     if isinstance(response.content, str):
         response.content = response.content.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")

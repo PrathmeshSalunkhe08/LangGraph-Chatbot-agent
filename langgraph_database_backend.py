@@ -92,15 +92,30 @@ def stock_crypto_price_tool(symbol_or_name: str) -> str:
 
 @tool
 def google_serper_search_tool(query: str) -> str:
-    """Use this tool to search Google for live news, real-time events, current sports scores, documentation, and facts."""
+    """Use this tool to search Google for live news, real-time events, current sports scores, documentation, biographies, and facts."""
+    try:
+        # Primary: 100% Free Unlimited Live Search via DDGS
+        from ddgs import DDGS
+        ddg_results = list(DDGS().text(query, max_results=5))
+        if ddg_results:
+            results = []
+            for idx, item in enumerate(ddg_results, 1):
+                title = item.get("title", "")
+                body = item.get("body", "")
+                results.append(f"Search Result {idx}: {title}\nDetails: {body}")
+            return "\n\n".join(results)
+    except Exception:
+        pass
+
+    # Fallback to Serper API if configured
     api_key = os.getenv("SERPER_API_KEY")
     if not api_key or not api_key.strip():
-        return "Google Serper API key not configured in .env."
+        return "Live Web Search: No search results returned."
     try:
         url = "https://google.serper.dev/search"
         headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
-        payload = {"q": query, "gl": "in", "hl": "en", "num": 3}
-        res = requests.post(url, headers=headers, json=payload, timeout=2).json()
+        payload = {"q": query, "gl": "in", "hl": "en", "num": 5}
+        res = requests.post(url, headers=headers, json=payload, timeout=3).json()
         
         results = []
         if "answerBox" in res and "snippet" in res["answerBox"]:
@@ -112,9 +127,9 @@ def google_serper_search_tool(query: str) -> str:
             snippet = item.get("snippet", "")
             results.append(f"Result {idx}: {title}\nDetails: {snippet}")
             
-        return "\n\n".join(results) if results else "No Google search results found."
+        return "\n\n".join(results) if results else "No web search results found."
     except Exception as e:
-        return f"Google Serper Search Error: {e}"
+        return f"Web Search Error: {e}"
 
 WEATHER_CODES = {
     0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",

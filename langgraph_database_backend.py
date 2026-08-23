@@ -99,18 +99,18 @@ def google_serper_search_tool(query: str) -> str:
     try:
         url = "https://google.serper.dev/search"
         headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
-        payload = {"q": query, "gl": "in", "hl": "en", "num": 5}
-        res = requests.post(url, headers=headers, json=payload, timeout=4).json()
+        payload = {"q": query, "gl": "in", "hl": "en", "num": 4}
+        res = requests.post(url, headers=headers, json=payload, timeout=3).json()
         
         results = []
         if "answerBox" in res and "snippet" in res["answerBox"]:
             results.append(f"Direct Answer: {res['answerBox']['snippet']}")
             
-        organic = res.get("organic", [])[:6]
+        organic = res.get("organic", [])[:4]
         for idx, item in enumerate(organic, 1):
             title = item.get("title", "")
             snippet = item.get("snippet", "")
-            results.append(f"BACKGROUND SEARCH ITEM {idx}:\nHeadline: {title}\nDetails: {snippet}")
+            results.append(f"BACKGROUND ITEM {idx}:\nHeadline: {title}\nDetails: {snippet}")
             
         return "\n\n".join(results) if results else "No Google search results found."
     except Exception as e:
@@ -133,7 +133,7 @@ def weather_forecast_tool(city: str) -> str:
     try:
         # 1. Geocode city name to exact coordinates using Open-Meteo Geocoding
         geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={clean_city}&count=1"
-        geo_res = requests.get(geo_url, timeout=5).json()
+        geo_res = requests.get(geo_url, timeout=3).json()
         if not geo_res.get("results"):
             return f"Location '{city}' not found. Please check city spelling."
             
@@ -145,7 +145,7 @@ def weather_forecast_tool(city: str) -> str:
         
         # 2. Fetch official meteorological weather data from Open-Meteo Radar
         w_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature"
-        w_res = requests.get(w_url, timeout=5).json()
+        w_res = requests.get(w_url, timeout=3).json()
         curr = w_res["current"]
         
         temp_c = curr["temperature_2m"]
@@ -189,7 +189,7 @@ def language_translator_tool(text_and_target_language: str) -> str:
             
         lang_code = LANG_MAP.get(target_lang, target_lang[:2])
         url = f"https://api.mymemory.translated.net/get?q={requests.utils.quote(text)}&langpair=en|{lang_code}"
-        res = requests.get(url, timeout=6).json()
+        res = requests.get(url, timeout=3).json()
         translated = res.get("responseData", {}).get("translatedText", text)
         
         return f"Translation ({target_lang.capitalize()}): {translated}"
@@ -203,16 +203,16 @@ def wikipedia_research_tool(query_topic: str) -> str:
     headers = {"User-Agent": "GraphMindAI/1.0 (Educational Assistant)"}
     try:
         url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(clean_topic)}"
-        res = requests.get(url, headers=headers, timeout=6).json()
+        res = requests.get(url, headers=headers, timeout=3).json()
         
         if res.get("type") == "https://mediawiki.org/wiki/HyperSwitch/errors/not_found":
             search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={requests.utils.quote(query_topic)}&format=json"
-            search_res = requests.get(search_url, headers=headers, timeout=6).json()
+            search_res = requests.get(search_url, headers=headers, timeout=3).json()
             search_items = search_res.get("query", {}).get("search", [])
             if search_items:
                 first_title = search_items[0]["title"].replace(" ", "_")
                 url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(first_title)}"
-                res = requests.get(url, headers=headers, timeout=6).json()
+                res = requests.get(url, headers=headers, timeout=3).json()
             else:
                 return f"No Wikipedia article found for '{query_topic}'."
                 

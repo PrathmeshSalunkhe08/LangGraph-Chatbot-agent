@@ -245,8 +245,35 @@ def get_current_time_tool(query: str) -> str:
     from datetime import datetime
     return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
+@tool
+def web_url_scraper_tool(url: str) -> str:
+    """Use this tool to scrape, read, and extract the main article text and content from any specific web page URL provided by the user."""
+    from bs4 import BeautifulSoup
+    import requests
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        res = requests.get(url, headers=headers, timeout=5)
+        res.raise_for_status()
+        
+        soup = BeautifulSoup(res.text, "html.parser")
+        
+        for element in soup(["script", "style", "nav", "header", "footer", "noscript", "svg"]):
+            element.decompose()
+            
+        text = soup.get_text(separator=" ", strip=True)
+        if len(text) > 2500:
+            text = text[:2500] + "... [Content Truncated]"
+            
+        return f"Scraped Content from {url}:\n\n{text}" if text else f"No readable text content found at {url}."
+    except Exception as e:
+        return f"Failed to scrape URL {url}: {e}"
+
 # List of tools and binding to LLM
-tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, language_translator_tool, wikipedia_research_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool]
+tools = [scientific_calculator_tool, stock_crypto_price_tool, weather_forecast_tool, language_translator_tool, wikipedia_research_tool, google_serper_search_tool, workspace_file_reader, get_current_time_tool, web_url_scraper_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(
@@ -260,7 +287,8 @@ SYSTEM_PROMPT = SystemMessage(
         "5. 🧮 **Scientific Calculator (`scientific_calculator_tool`)**: Show step-by-step mathematical solutions and final results formatted cleanly.\n"
         "6. 🌐 **Language Translator (`language_translator_tool`)**: Deliver fluent, natural translations with cultural context.\n"
         "7. 📁 **Workspace File Reader (`workspace_file_reader`)**: Inspect local project files accurately when requested by the user.\n"
-        "8. ⏰ **Current Time & Date (`get_current_time_tool`)**: Provide accurate real-time date and timestamp information.\n\n"
+        "8. ⏰ **Current Time & Date (`get_current_time_tool`)**: Provide accurate real-time date and timestamp information.\n"
+        "9. 🔗 **Web Page Scraper (`web_url_scraper_tool`)**: Read, extract, and summarize text content directly from any URL link provided by the user.\n\n"
         "### 🌟 CORE ADAPTIVE RESPONSE PRINCIPLES:\n"
         "1. **NATURAL & EASY TO UNDERSTAND**: Communicate in clear, simple, human language. Break down complex topics using intuitive analogies, clean formatting, bold key phrases, and structured sections.\n"
         "2. **DYNAMIC ADAPTATION (Match User Intent Exactly)**:\n"

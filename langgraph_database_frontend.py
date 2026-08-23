@@ -440,7 +440,8 @@ with st.sidebar:
         st.markdown("<div style='font-size:0.75rem; color:#34d399;'>● Online Session</div>", unsafe_allow_html=True)
 
     with st.expander("⚙️ System Architecture", expanded=False):
-        st.markdown("**LLM Provider:** Groq (Llama 3.1 8B Instant)")
+        provider_info = "OpenRouter (NVIDIA Nemotron 3.5 1M)" if os.getenv("OPENROUTER_API_KEY") else "Groq (Compound-Mini)"
+        st.markdown(f"**LLM Provider:** {provider_info}")
         st.markdown("**Checkpoint Engine:** SqliteSaver (`chatbot.db`)")
         st.markdown(f"**Current Thread:**\n`{st.session_state['thread_id'][:18]}...`")
 
@@ -456,6 +457,7 @@ with hdr_col1:
     else:
         st.markdown("🤖")
 with hdr_col2:
+    active_badge = "NVIDIA 1M Tokens" if os.getenv("OPENROUTER_API_KEY") else "Groq Compound"
     st.markdown(f"""
     <div class="main-header-card">
         <div>
@@ -464,7 +466,7 @@ with hdr_col2:
             <div style="margin-top: 10px;">
                 <span class="tech-badge-emerald">LangGraph</span>
                 <span class="tech-badge-violet">SQLite Memory</span>
-                <span class="tech-badge-emerald">OpenAI GPT</span>
+                <span class="tech-badge-emerald">{active_badge}</span>
             </div>
         </div>
     </div>

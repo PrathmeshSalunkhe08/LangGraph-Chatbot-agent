@@ -13,43 +13,88 @@ from langgraph.graph.message import add_messages
 import sqlite3
 
 
-# Initialize Groq Compound Mini (0.6s Ultra Fast Speed + High 70,000 Token Limit)
+# Initialize Groq LLM with native Tool Calling support (0.8s Speed)
 llm = ChatGroq(
-    model="groq/compound-mini",
+    model="openai/gpt-oss-20b",
     temperature=0.7
 )
 
-from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
+from langchain_core.tools import tool
+from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage, BaseMessage
+
+# Define Useful Agent Tools
+@tool
+def calculator_tool(expression: str) -> str:
+    """Use this tool to calculate mathematical expressions precisely (e.g., 25 * 40 + 150)."""
+    try:
+        result = eval(expression, {"__builtins__": None}, {})
+        return f"Calculated Result: {result}"
+    except Exception as e:
+        return f"Math Error: {e}"
+
+@tool
+def workspace_file_reader(filename: str) -> str:
+    """Use this tool to read text or code files from the local project workspace (e.g., requirements.txt, .gitignore, README.md)."""
+    try:
+        if not os.path.exists(filename):
+            return f"File '{filename}' not found."
+        with open(filename, "r", encoding="utf-8") as f:
+            return f.read()[:2000]
+    except Exception as e:
+        return f"Error reading file: {e}"
+
+@tool
+def database_inspector(query_type: str) -> str:
+    """Use this tool to check live statistics and thread counts stored in the chatbot.db SQLite database."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT count(distinct thread_id) FROM checkpoints")
+        count = cursor.fetchone()[0]
+        return f"Database Statistics: Total active conversation threads in chatbot.db = {count}"
+    except Exception as e:
+        return f"Database error: {e}"
+
+@tool
+def get_current_time_tool(query: str) -> str:
+    """Use this tool to get the current date and time."""
+    from datetime import datetime
+    return f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+# List of tools and binding to LLM
+tools = [calculator_tool, workspace_file_reader, database_inspector, get_current_time_tool]
+llm_with_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = SystemMessage(
-    content="You are GraphMind AI assistant. Respond in clean Markdown. Do NOT include literal HTML tags like <br> or <br/> inside tables or text lists."
+    content="You are GraphMind AI assistant equipped with tools. Use your available tools when necessary to solve user queries accurately. Respond in clean Markdown."
 )
 
 # Define state schema
 class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
-from langchain_core.messages import AIMessage
-
-# Define conversation node with smart context trimming (guarantees < 1500 tokens per request)
+# Define conversation node
 def Chat_node(state: ChatState):
     raw_messages = state['messages']
-    # Select last 6 messages
     recent = raw_messages[-6:] if len(raw_messages) > 6 else raw_messages
     
-    # Trim individual old message text if too long to prevent TPM rate limits
     trimmed_msgs = []
     for m in recent:
-        content_str = str(m.content)
-        if len(content_str) > 800:
-            content_str = content_str[:800] + "... [context truncated]"
         if isinstance(m, HumanMessage):
+            content_str = str(m.content)
+            if len(content_str) > 800:
+                content_str = content_str[:800] + "... [context truncated]"
             trimmed_msgs.append(HumanMessage(content=content_str))
+        elif isinstance(m, AIMessage):
+            content_str = str(m.content)
+            if len(content_str) > 800:
+                content_str = content_str[:800] + "... [context truncated]"
+            trimmed_msgs.append(AIMessage(content=content_str, tool_calls=getattr(m, 'tool_calls', [])))
         else:
-            trimmed_msgs.append(AIMessage(content=content_str))
+            trimmed_msgs.append(m)
 
     input_msgs = [SYSTEM_PROMPT] + trimmed_msgs
-    response = llm.invoke(input_msgs)
+    response = llm_with_tools.invoke(input_msgs)
     if isinstance(response.content, str):
         response.content = response.content.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
     return {"messages": [response]}
@@ -58,11 +103,16 @@ def Chat_node(state: ChatState):
 conn = sqlite3.connect(database="chatbot.db", check_same_thread=False) 
 check_pointer = SqliteSaver(conn=conn)              
 
-# Build LangGraph graph
+# Build LangGraph graph with ToolNode and conditional edges
+tool_node = ToolNode(tools=tools)
+
 graph = StateGraph(ChatState)
 graph.add_node("Chat_node", Chat_node)
+graph.add_node("tools", tool_node)
+
 graph.add_edge(START, "Chat_node")
-graph.add_edge("Chat_node", END)
+graph.add_conditional_edges("Chat_node", tools_condition)
+graph.add_edge("tools", "Chat_node")
 
 # Compile chatbot graph with SQLite checkpointer
 chatbot = graph.compile(checkpointer=check_pointer)
